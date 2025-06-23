@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  redis:
+    image: pugss_redis_images
+    build:
+      context: ./redis_docker
+    container_name: pugss_redis
+    restart: always
+    ports:
+      - "5201:6379"
+    networks:
+      mybridge:
+        ipv4_address: ${REDIS_IP}
+    volumes:
+      - ./redis_docker/redis.conf:/usr/local/etc/redis/redis.conf
+
+  mysql:
+    image: mysql:latest
+    container_name: pugss_mysql
+    restart: always
+    ports:
+      - "5202:3306"
+    networks:
+      mybridge:
+        ipv4_address: ${MYSQL_IP}
+    volumes:
+      - ${MYSQL_DATA_DIR:-/data/mysql}:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  django:
+    depends_on:
+     - mysql
+     - redis
+    image: pugss_django_images
+    build:
+      context: ./Django_docker
+      args:
+        - PROJECT_NAME:${PROJECT_NAME}
+    container_name: pugss_Django
+    restart: always
+    ports:
+      - "5203:8000"
+    networks:
+      mybridge:
+        ipv4_address: ${DJANGO_IP}
+    volumes:
+      - /data/Django/:/app/Pugss/logs
+    environment:
+      ENV: ${DJANGO_ENV}
+
+  nginx:
+    image: pugss_nginx_images
+    build:
+      context: ./nginx_docker
+      args:
+        - SERVER_ADDR:${SERVER_ADDR}
+    container_name: pugss_nginx
+    restart: always
+    ports:
+     - "${NGINX_HTTP_PORT:-5204}:80"
+     - "${NGINX_HTTPS_PORT:-5205}:443"
+     - "${NGINX_APP_PORT:-5206}:8000"
+    networks:
+      mybridge:
+        ipv4_address: ${NGINX_IP}
+    volumes:
+      - ./nginx_docker/dist:/var/www/html
+      - /data/nginx/log/:/var/log/nginx/
+
+networks:
+  mybridge:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET}
+          gateway: ${NETWORK_GATEWAY}
