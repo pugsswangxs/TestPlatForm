@@ -111,7 +111,10 @@ docker network create \
  ```
 2. 创建镜像和容器
 ```shell
-docker-compose -p myapp up -d
+docker rm -f pugss_Django pugss_redis pugss_mysql pugss_nginx
+docker rmi -f pugss_django_images pugss_redis_images pugss_mysql_images pugss_nginx_images
+docker network rm mybridge
+ docker-compose  up -d
 ```
 3. 结果查看
 ```
@@ -120,3 +123,14 @@ docker-compose -p myapp up -d
 
 ## 问题排查
 使用  ReadMeDeployByDockerFile.MD 文件 逐步排查即可
+
+## 用户创建
+1. 创建超级用户
+```
+docker exec -it pugss_Django sh
+python manage.py createsuperuser
+```
+2. 创建其他用户
+```
+打开 http://ip:5206/admin/login
+```
